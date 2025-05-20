@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./node_modules/@prisma/client" // Ruta de salida para el cliente Prisma
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo para roles de usuario
+model Rol {
+  id        Int       @id @default(autoincrement())
+  nombre    String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  usuarios  Usuario[]
+  permisos  Permiso[] @relation("PermisoToRol")
+}
+
+// Modelo para permisos
+model Permiso {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  roles     Rol[]    @relation("PermisoToRol")
+}
+
+// Modelo para usuarios
+model Usuario {
+  id        Int       @id @default(autoincrement())
+  nombre    String
+  email     String    @unique
+  password  String
+  rolId     Int?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  alumno    Alumno?
+  profesor  Profesor?
+  tutor     Tutor?
+  rol       Rol?      @relation(fields: [rolId], references: [id])
+}
+
+// Modelo para alumnos
+model Alumno {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int      @unique
+  tutorId   Int?
+  claseId   Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  clase     Aula?    @relation(fields: [claseId], references: [id])
+  tutor     Tutor?   @relation("AlumnoTutor", fields: [tutorId], references: [id])
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  asistencias Asistencia[]
+}
+
+// Modelo para profesores
+model Profesor {
+  id          Int         @id @default(autoincrement())
+  usuarioId   Int         @unique
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  actividades Actividad[] @relation("ProfesorActividades")
+  clases      Aula[]
+  usuario     Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+// Modelo para aulas
+model Aula {
+  id          Int         @id @default(autoincrement())
+  nombre      String
+  profesorId  Int
+  createdAt   DateTime    @default(now())
+  descripcion String?
+  updatedAt   DateTime    @updatedAt
+  actividades Actividad[] @relation("AulaActividades")
+  alumnos     Alumno[]
+  profesor    Profesor    @relation(fields: [profesorId], references: [id])
+  asistencias Asistencia[]
+}
+
+// Modelo para tutores
+model Tutor {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int      @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  alumnos   Alumno[] @relation("AlumnoTutor")
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+// Modelo para actividades
+model Actividad {
+  id           Int       @id @default(autoincrement())
+  titulo       String
+  descripcion  String?
+  aulaId       Int?
+  createdAt    DateTime  @default(now())
+  fechaEntrega DateTime?
+  profesorId   Int
+  updatedAt    DateTime  @updatedAt
+  aula         Aula?     @relation("AulaActividades", fields: [aulaId], references: [id])
+  profesor     Profesor  @relation("ProfesorActividades", fields: [profesorId], references: [id], onDelete: Cascade)
+}
+
+model Asistencia {
+  id          String   @id @default(uuid())
+  alumnoId    Int
+  alumno      Alumno   @relation(fields: [alumnoId], references: [id])
+  claseId     Int
+  clase       Aula     @relation(fields: [claseId], references: [id]) // O "Clase" si creamos una tabla aparte
+  fecha       DateTime @db.Date
+  hora        DateTime @db.Time
+  estado      EstadoAsistencia
+  observaciones String?
+
+  @@map("asistencia")
+}
+
+enum EstadoAsistencia {
+  PRESENTE
+  AUSENTE
+  TARDANZA
+  JUSTIFICADO
+}
