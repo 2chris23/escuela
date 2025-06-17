@@ -1,0 +1,145 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Rol {
+  id        Int       @id @default(autoincrement())
+  nombre    String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  usuarios  Usuario[]
+  permisos  Permiso[] @relation("PermisoToRol")
+}
+
+model Permiso {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  roles     Rol[]    @relation("PermisoToRol")
+}
+
+model Usuario {
+  id        Int       @id @default(autoincrement())
+  nombre    String
+  email     String    @unique
+  password  String
+  rolId     Int       @default(1)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  alumno    Alumno?
+  profesor  Profesor?
+  tutor     Tutor?
+  refreshTokens RefreshToken[]
+  rol       Rol      @relation(fields: [rolId], references: [id])
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  user      Usuario  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Aula {
+  id          Int       @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  profesor    Profesor? @relation(fields: [profesorId], references: [id])
+  profesorId  Int?
+  alumnos     Alumno[]
+  actividades Actividad[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([profesorId])
+}
+
+model Alumno {
+  id        Int      @id @default(autoincrement())
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuarioId Int      @unique
+  aula      Aula?    @relation(fields: [aulaId], references: [id])
+  aulaId    Int?
+  actividades AlumnoActividad[]
+  tutor     Tutor?   @relation(fields: [tutorId], references: [id])
+  tutorId   Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([usuarioId])
+  @@index([aulaId])
+  @@index([tutorId])
+}
+
+model Profesor {
+  id        Int      @id @default(autoincrement())
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuarioId Int      @unique
+  aulas     Aula[]
+  actividades Actividad[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([usuarioId])
+}
+
+model Tutor {
+  id        Int      @id @default(autoincrement())
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuarioId Int      @unique
+  alumnos   Alumno[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([usuarioId])
+}
+
+model Actividad {
+  id          Int      @id @default(autoincrement())
+  titulo      String
+  descripcion String?
+  fechaInicio DateTime
+  fechaFin    DateTime
+  profesor    Profesor @relation(fields: [profesorId], references: [id])
+  profesorId  Int
+  aula        Aula     @relation(fields: [aulaId], references: [id])
+  aulaId      Int
+  alumnos     AlumnoActividad[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([profesorId])
+  @@index([aulaId])
+}
+
+model AlumnoActividad {
+  id          Int      @id @default(autoincrement())
+  alumno      Alumno   @relation(fields: [alumnoId], references: [id])
+  alumnoId    Int
+  actividad   Actividad @relation(fields: [actividadId], references: [id])
+  actividadId Int
+  calificacion Float?
+  estado      String   @default("pendiente") // pendiente, completada, calificada
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([alumnoId, actividadId])
+  @@index([alumnoId])
+  @@index([actividadId])
+}
+
+// Puedes agregar aquí los modelos adicionales según tu necesidad.
